@@ -1,0 +1,51 @@
+# Environment and local config
+.env
+.env.*
+*.env
+*.env.*
+*.local
+**/.env
+**/.env.*
+**/*.env
+**/*.env.*
+
+# Secrets and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+*.kubeconfig
+
+# Python environments and cache
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Large archives and exports
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Large document outputs (keep source markdown tracked)
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
