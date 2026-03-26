@@ -1,0 +1,20 @@
+[task]
+name        = "microservice_dependency_hell"
+version     = "1.0.0"
+description = "Diagnose and repair a broken Python microservices deployment with five layered dependency, configuration, and API-migration failures across FastAPI, Flask, Nginx, Redis, and Celery."
+domain      = "devops"
+difficulty  = "hard"
+tags        = ["docker", "python", "microservices", "debugging", "dependency-management"]
+
+[environment]
+compose_file = "environment/docker-compose.yml"
+
+[environment.runtime]
+python = "3.12"
+
+[agent]
+max_turns = 30
+timeout   = 600
+
+[scoring]
+pass_threshold = 1.0
