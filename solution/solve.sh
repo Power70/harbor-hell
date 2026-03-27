@@ -98,34 +98,12 @@ fi
 
 echo ""
 echo "=================================================="
-echo " Starting stack (rebuild required after file edits)"
+echo " Solve phase complete"
 echo "=================================================="
-cd "$APP_DIR"
-
-docker compose down --remove-orphans --volumes 2>/dev/null || true
-docker compose up --build -d
-
-echo ""
-echo "  Waiting for stack (max 120s)..."
-DEADLINE=$(( $(date +%s) + 120 ))
-while true; do
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-             http://localhost:8080/health 2>/dev/null || echo "000")
-    if [ "$STATUS" = "200" ]; then
-        echo "  [OK] HTTP 200 on /health — stack is healthy"
-        break
-    fi
-    NOW=$(date +%s)
-    if [ "$NOW" -ge "$DEADLINE" ]; then
-        echo "  [ERROR] Stack not healthy after 120s (last HTTP: $STATUS)"
-        docker compose logs --no-color --tail=80
-        exit 1
-    fi
-    echo "  ... HTTP $STATUS — retrying in 5s ($(( DEADLINE - NOW ))s left)"
-    sleep 5
-done
+echo "  [OK] All code/config fixes applied to /app"
+echo "  [INFO] Stack startup is handled by Harbor verifier/runtime"
 
 echo ""
 echo "=================================================="
-echo " All 5 fixes applied. Stack is running."
+echo " All 5 fixes applied."
 echo "=================================================="

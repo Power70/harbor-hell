@@ -33,7 +33,6 @@ def login():
     if not username or USERS.get(username) != password:
         return jsonify({"error": "Invalid credentials"}), 401
 
-    # Fails at this line if REDIS_URL port is wrong
     _redis.setex(f"session:{username}", 3600, "active")
 
     token = create_access_token(identity=username)
