@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+
+  nginx:
+    image: nginx:1.25.3
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api-gateway
+    restart: on-failure
+
+  api-gateway:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app/api-gateway
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - DATA_SERVICE_URL=http://data-service:5002
+    depends_on:
+      - auth-service
+      - data-service
+    restart: on-failure
+
+  auth-service:
+    build: .
+    command: flask --app app run --host 0.0.0.0 --port 5001
+    ports:
+      - "5001:5001"
+    environment:
+      - PYTHONPATH=/app/auth-service
+    env_file:
+      - ./auth-service/.env
+    depends_on:
+      - redis
+    restart: on-failure
+
+  data-service:
+    build: .
+    command: flask --app app run --host 0.0.0.0 --port 5002
+    ports:
+      - "5002:5002"
+    environment:
+      - PYTHONPATH=/app/data-service
+      - DATABASE_URL=sqlite:////data/app.db
+      - BROKER_URL=redis://redis:6379/0
+    volumes:
+      - data_volume:/data
+    depends_on:
+      - redis
+    restart: on-failure
+
+  redis:
+    image: redis:7.2.3
+    ports:
+      - "6379:6379"
+    restart: on-failure
+
+  celery-worker:
+    build: .
+    command: celery -A celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - PYTHONPATH=/app/worker
+      - BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - data-service
+    restart: on-failure
+
+volumes:
+  data_volume:

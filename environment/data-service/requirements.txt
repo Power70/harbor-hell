@@ -1,0 +1,6 @@
+flask==2.3.3
+flask-sqlalchemy==3.1.1
+SQLAlchemy==2.0.21
+celery==5.3.4
+redis==5.0.1
+Werkzeug==2.3.7
