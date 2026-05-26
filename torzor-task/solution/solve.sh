@@ -7,6 +7,7 @@ cat > /app/main.py <<'PY'
 import csv
 import io
 import time
+from datetime import UTC, datetime
 
 from fastapi import FastAPI
 from starlette.concurrency import run_in_threadpool
@@ -33,7 +34,13 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/bulk-export")
-async def bulk_export() -> dict[str, int]:
+async def bulk_export() -> dict[str, object]:
 	csv_data = await run_in_threadpool(legacy_generate_csv)
-	return {"rows": 2000, "bytes": len(csv_data)}
+	row_count = csv_data.count("\n") - 1
+	return {
+		"filename": "bulk-export.csv",
+		"rows": row_count,
+		"bytes": len(csv_data.encode("utf-8")),
+		"generated_at": datetime.now(UTC).isoformat(),
+	}
 PY

@@ -1,16 +1,17 @@
-Our FastAPI service has event-loop starvation: when `/bulk-export` is called, all other requests stall and users see timeouts.
+Our FastAPI service has event-loop starvation: when `/bulk-export` is called, other requests stall and users see timeouts.
 
-Fix the concurrency bug in `/app/main.py`.
+Create `/app/main.py` with a FastAPI app that fixes the concurrency bug.
 
 Requirements:
-1. Keep `bulk_export` as an `async def` endpoint and keep the export feature.
-2. The blocking legacy CSV generator must not run directly on the event loop.
-3. Offload the blocking call using either `starlette.concurrency.run_in_threadpool` or `asyncio.to_thread`.
-4. Keep a working `/health` endpoint that returns `{"status": "ok"}`.
-5. Do not solve this by removing features, changing worker counts, or adding infrastructure.
+1. Define a synchronous helper named `legacy_generate_csv` that simulates the legacy blocking CSV export work.
+2. Keep `bulk_export` as an `async def` GET endpoint and keep the export feature.
+3. Offload the blocking helper using either `starlette.concurrency.run_in_threadpool` or `asyncio.to_thread`.
+4. Keep a working GET `/health` endpoint that returns `{"status": "ok"}`.
+5. `/bulk-export` must return JSON metadata for the export, including the filename, row count, byte size, and timestamp.
+6. Do not solve this by removing features, changing worker counts, or adding infrastructure.
 
 Expected outcome:
-- `/bulk-export` still returns a JSON payload with export metadata.
+- `/bulk-export` still returns JSON metadata.
 - `/health` remains responsive while export work is running.
 
-Only modify application code needed to fix the root cause.
+Only create the application code needed to fix the root cause nothing else.

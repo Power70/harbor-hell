@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import ast
 import importlib.util
-import hashlib
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 
 APP_PATH = Path("/app/main.py")
-EXPECTED_SHA256 = "03a2bc98910e5e642cb1b105eb555c92e3e7da4cf4d1cbbd2cf6e399d356c888"
 
 
 def _load_app_module():
@@ -22,11 +20,6 @@ def _load_app_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
-
-def _sha256(path: Path) -> str:
-    """Return the SHA256 digest of a file so the solution cannot mutate it silently."""
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _bulk_export_uses_thread_offloading(source: str) -> bool:
@@ -53,7 +46,10 @@ def _bulk_export_uses_thread_offloading(source: str) -> bool:
                     continue
 
                 first_arg = call.args[0] if call.args else None
-                if isinstance(first_arg, ast.Name) and first_arg.id == "legacy_generate_csv":
+                if (
+                    isinstance(first_arg, ast.Name)
+                    and first_arg.id == "legacy_generate_csv"
+                ):
                     return True
 
             return False
@@ -64,13 +60,6 @@ def _bulk_export_uses_thread_offloading(source: str) -> bool:
 def test_app_file_exists_for_fix_target():
     """The target application file should exist after setup or solution."""
     assert APP_PATH.exists(), "Expected /app/main.py to exist"
-
-
-def test_app_file_has_expected_hash():
-    """The fixed application must match the exact reviewed implementation."""
-    assert _sha256(APP_PATH) == EXPECTED_SHA256, (
-        "Unexpected /app/main.py hash; the fix must use the reviewed solution code"
-    )
 
 
 def test_health_endpoint_returns_expected_payload():
@@ -92,11 +81,12 @@ def test_bulk_export_endpoint_still_present_and_returns_metadata():
     assert response.status_code == 200, "Expected /bulk-export to return HTTP 200"
 
     payload = response.json()
-    assert "rows" in payload and "bytes" in payload, (
-        "Bulk export response must include rows and bytes"
+    assert "filename" in payload and "rows" in payload and "bytes" in payload, (
+        "Bulk export response must include filename, rows, and bytes"
     )
     assert payload["rows"] > 0, "rows should be positive"
     assert payload["bytes"] > 0, "bytes should be positive"
+    assert payload["filename"].endswith(".csv"), "filename should be a CSV file"
 
 
 def test_bulk_export_offloads_blocking_work_from_event_loop():
