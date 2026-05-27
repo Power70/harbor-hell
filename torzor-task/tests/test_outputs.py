@@ -9,43 +9,45 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 
-APP_PATH = Path("/app/main.py")
+APP_FILE_PATH = Path("/app/main.py")
 
 
-def _load_app_module():
+def load_app_module():
     """Load /app/main.py as a Python module for runtime behavior checks."""
-    spec = importlib.util.spec_from_file_location("target_app", APP_PATH)
-    assert spec and spec.loader, "Could not load module spec from /app/main.py"
+    module_spec = importlib.util.spec_from_file_location("target_app", APP_FILE_PATH)
+    assert module_spec and module_spec.loader, (
+        "Could not load module spec from /app/main.py"
+    )
 
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    app_module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(app_module)
+    return app_module
 
 
-def _bulk_export_uses_thread_offloading(source: str) -> bool:
+def bulk_export_uses_thread_offloading(source: str) -> bool:
     """Return True when bulk_export offloads legacy_generate_csv via thread helpers."""
     tree = ast.parse(source)
 
     for node in tree.body:
         if isinstance(node, ast.AsyncFunctionDef) and node.name == "bulk_export":
-            for sub in ast.walk(node):
-                if not isinstance(sub, ast.Await):
+            for sub_node in ast.walk(node):
+                if not isinstance(sub_node, ast.Await):
                     continue
 
-                call = sub.value
-                if not isinstance(call, ast.Call):
+                call_expr = sub_node.value
+                if not isinstance(call_expr, ast.Call):
                     continue
 
                 callee_name = None
-                if isinstance(call.func, ast.Name):
-                    callee_name = call.func.id
-                elif isinstance(call.func, ast.Attribute):
-                    callee_name = call.func.attr
+                if isinstance(call_expr.func, ast.Name):
+                    callee_name = call_expr.func.id
+                elif isinstance(call_expr.func, ast.Attribute):
+                    callee_name = call_expr.func.attr
 
                 if callee_name not in {"run_in_threadpool", "to_thread"}:
                     continue
 
-                first_arg = call.args[0] if call.args else None
+                first_arg = call_expr.args[0] if call_expr.args else None
                 if (
                     isinstance(first_arg, ast.Name)
                     and first_arg.id == "legacy_generate_csv"
@@ -59,12 +61,12 @@ def _bulk_export_uses_thread_offloading(source: str) -> bool:
 
 def test_app_file_exists_for_fix_target():
     """The target application file should exist after setup or solution."""
-    assert APP_PATH.exists(), "Expected /app/main.py to exist"
+    assert APP_FILE_PATH.exists(), "Expected /app/main.py to exist"
 
 
 def test_health_endpoint_returns_expected_payload():
     """Health endpoint should stay available and return the expected payload."""
-    module = _load_app_module()
+    module = load_app_module()
     client = TestClient(module.app)
 
     response = client.get("/health")
@@ -74,7 +76,7 @@ def test_health_endpoint_returns_expected_payload():
 
 def test_bulk_export_endpoint_still_present_and_returns_metadata():
     """Export feature must remain enabled and return useful metadata."""
-    module = _load_app_module()
+    module = load_app_module()
     client = TestClient(module.app)
 
     response = client.get("/bulk-export")
@@ -91,9 +93,9 @@ def test_bulk_export_endpoint_still_present_and_returns_metadata():
 
 def test_bulk_export_offloads_blocking_work_from_event_loop():
     """bulk_export must offload legacy sync work with run_in_threadpool or to_thread."""
-    source = APP_PATH.read_text()
+    source = APP_FILE_PATH.read_text()
 
-    assert _bulk_export_uses_thread_offloading(source), (
+    assert bulk_export_uses_thread_offloading(source), (
         "bulk_export must await run_in_threadpool(legacy_generate_csv) or "
         "await asyncio.to_thread(legacy_generate_csv)"
     )
