@@ -1,20 +1,15 @@
-Implement `/app/main.py` as a FastAPI service for a legacy CSV export path that currently harms responsiveness.
+Implement `/app/main.py` as a FastAPI service that serves a legacy CSV export path without hurting responsiveness.
 
 Behavior requirements:
-1. Provide `GET /health` returning exactly `{"status": "ok"}`.
-2. Provide `GET /bulk-export` as an async endpoint with query param `rows` (default `1200`, valid range `10..5000`).
-3. Keep a synchronous helper named `legacy_generate_csv(rows: int) -> str` that does the actual CSV generation work.
-4. Export response must be JSON with exactly these keys:
-   - `filename`
-   - `rows`
-   - `bytes`
-   - `checksum_sha256`
-   - `generated_at`
-5. `filename` must be `bulk-export.csv`; `rows` must reflect the effective row count; `bytes` must be UTF-8 byte size of generated CSV content; `checksum_sha256` must match generated CSV bytes.
-6. `generated_at` must be an ISO-8601 UTC timestamp including timezone offset.
-7. During a heavy export call, the health endpoint must remain responsive.
+1. `GET /health` returns exactly `{"status": "ok"}`.
+2. `GET /bulk-export` is async, accepts `rows` (default `1200`, allowed range `10..5000`), and returns export metadata as JSON.
+3. Keep the CSV generation synchronous inside the implementation, but do not let it block request handling.
+4. Export metadata must include `filename`, `rows`, `bytes`, `checksum_sha256`, and `generated_at`.
+5. `filename` is always `bulk-export.csv`; `rows` reflects the request; `bytes` and `checksum_sha256` must match the generated CSV payload; `generated_at` is an ISO-8601 UTC timestamp.
+6. Keep a short in-memory history of the most recent export metadata and expose it from `GET /exports/recent` newest-first, capped to 5 entries.
+7. Under export load, `GET /health` must still respond quickly.
 
 Constraints:
-- Preserve the export feature (no stubbing it out).
+- Preserve the export feature.
 - Do not add external services, queues, or extra infrastructure.
-- Keep implementation focused on this file only.
+- Keep the implementation in `/app/main.py`.

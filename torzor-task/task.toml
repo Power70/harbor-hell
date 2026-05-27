@@ -5,9 +5,9 @@ author_name = "unknown"
 author_email = "unknown"
 difficulty = "hard"
 category = "backend-concurrency"
-tags = [ "fastapi", "asyncio", "concurrency", "api-contract", "validation" ]
-expert_time_estimate_min = 35
-junior_time_estimate_min = 75
+tags = [ "fastapi", "asyncio", "concurrency", "state", "validation" ]
+expert_time_estimate_min = 45
+junior_time_estimate_min = 90
 
 [verifier]
 timeout_sec = 120.0
